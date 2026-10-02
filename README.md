@@ -13,9 +13,10 @@
 
 - 工坊底部「App icons / App 图标」区：应用列表（自动扫描 /Applications、/System/Applications、~/Applications 等）、名称筛选、图标选择
 - 一键应用 / 一键恢复默认；默认目标自动选中 DeepSeek Harness
-- macOS 实现：NSWorkspace 自定义图标（`Icon\r` 资源 + Finder 标志位，均在 `Contents/` 之外）——**代码签名不受影响**，Finder 立即生效（Dock 可能需重启对应应用刷新）
-- 已应用目标记录在 `~/.dsh/any-icon/applied.json`；「恢复默认」只回收 any-icon 应用过的图标，不碰用户既有自定义
-- Windows（实验性）：重写 .lnk 快捷方式的 `IconLocation`（生成 PNG 内嵌 .ico）；.exe 资源级改图标不在范围内
+- macOS 实现：直接替换应用包内 `Contents/Resources/icon.icns`（sips + iconutil 生成多尺寸）+ ad-hoc 重签名 + **自动清理系统图标缓存**（iconservices / Dock iconcache，用户级路径）并重启 Dock——Finder/Dock/启动台全部生效
+- 应用后自动安排「退出即重启」：完全退出 dsh（Cmd+Q）的瞬间自动重新打开，新图标即刻可见
+- 已应用目标记录在 `~/.dsh/any-icon/`（字节级备份 + manifest）；「恢复原始图标」还原后原签名重新有效
+- macOS 首次使用需授予「App 管理」权限（系统会弹窗，或在 系统设置 → 隐私与安全性 → App 管理 中手动开启）
 
 **图标工坊（会话图标）**
 
