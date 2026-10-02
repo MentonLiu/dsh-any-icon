@@ -507,7 +507,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 
     async function callAnyIcon(ctx, fn) {
       const service = await getAnyIconService(ctx);
-      return fn(service);
+      const raw = await fn(service);
+      // Unary proxy results arrive as { ok, value } envelopes on some dsh
+      // versions; unwrap when present, pass through otherwise.
+      if (raw && typeof raw === "object" && "ok" in raw && "value" in raw && Object.keys(raw).length <= 2) {
+        return raw.value;
+      }
+      return raw;
+    }
+
+    function safeJson(value) {
+      try {
+        const json = JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? String(v) : v));
+        return json === undefined ? String(value) : json.slice(0, 600);
+      } catch (err) { return "unserializable: " + String(err); }
     }
 
     // ------------------------------------------------------------------
@@ -933,7 +946,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         if (!window.confirm(format(t("confirmApply"), { app: appNameOf(apps || [], selectedApp) }))) return;
         setBusy(true);
         try {
-          await callAnyIcon(boundCtx, (svc) => svc.applyAppIcon({ appPath: selectedApp, pngDataUrl: icon.master }));
+          await callAnyIcon(boundCtx, (svc) => svc.applyAppIcon(selectedApp, icon.master));
           setNotice(format(t("appApplyOk"), { app: appNameOf(apps || [], selectedApp) }));
         } catch (err) {
           setError(format(t("appApplyFail"), { msg: String((err && err.message) || err) }));
@@ -948,7 +961,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         if (!window.confirm(format(t("confirmReset"), { app: appNameOf(apps || [], selectedApp) }))) return;
         setBusy(true);
         try {
-          const result = await callAnyIcon(boundCtx, (svc) => svc.resetAppIcon({ appPath: selectedApp }));
+          const result = await callAnyIcon(boundCtx, (svc) => svc.resetAppIcon(selectedApp));
           setNotice(result && result.removed ? format(t("appResetOk"), { app: appNameOf(apps || [], selectedApp) }) : t("appResetNone"));
         } catch (err) {
           setError(format(t("appApplyFail"), { msg: String((err && err.message) || err) }));
@@ -1079,9 +1092,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       // localStorage["dsh-any-icon.selftest.result"] for automated checks.
       if (typeof localStorage !== "undefined" && localStorage.getItem("dsh-any-icon.selftest") === "1") {
         callAnyIcon(ctx, (svc) => svc.listApps()).then((result) => {
-          localStorage.setItem("dsh-any-icon.selftest.result", JSON.stringify({ ok: true, platform: result.platform, supported: result.supported, count: result.apps.length, sample: result.apps.slice(0, 2) }));
+          localStorage.setItem("dsh-any-icon.selftest.result", JSON.stringify({ ok: true, rawType: typeof result, keys: result && typeof result === "object" ? Object.keys(result) : String(result), raw: safeJson(result) }));
         }).catch((err) => {
-          localStorage.setItem("dsh-any-icon.selftest.result", JSON.stringify({ ok: false, error: String((err && err.message) || err) }));
+          localStorage.setItem("dsh-any-icon.selftest.result", JSON.stringify({ ok: false, error: String((err && err.message) || err), stack: String(err && err.stack || "").slice(0, 500) }));
         });
       }
     }
