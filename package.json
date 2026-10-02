@@ -38,5 +38,9 @@
         "@deepseek-ai/dsh-client-ui-primitives"
       ]
     }
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "zod": "^4.6.5"
   }
 }

@@ -60,25 +60,25 @@
       rowMenu: "自定义图标…",
       saved: "已保存",
       applyDefault: "设为此会话默认",
-      appSection: "App 图标",
-      appIntro: "把裁剪好的图标应用到系统层面的应用。macOS 通过 Finder 自定义图标实现，不修改应用包内容，不影响代码签名。",
-      appPick: "目标应用",
-      appSearch: "筛选应用…",
-      appRefresh: "重新加载",
-      appLoading: "正在加载应用列表…",
-      appEmpty: "未找到匹配的应用",
+      appSection: "dsh 图标",
+      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标（替换包内 icon.icns + 临时重签名，刷新 Dock）。原始图标会字节级备份，可一键还原；dsh 自动更新后图标会被还原，可重新应用。",
+      appPick: "当前目标",
+      appLoading: "正在检测 dsh 桌面端…",
+      appNotFound: "未找到 dsh 桌面端（需要 macOS 版并安装在 /Applications 或「应用程序」文件夹）",
       appSelectIcon: "选择图标（来自上方图库）",
-      appApply: "应用图标",
-      appReset: "恢复默认图标",
-      confirmApply: "把自定义图标应用到「{app}」？可随时用「恢复默认图标」还原。",
-      confirmReset: "恢复「{app}」的默认图标？",
-      appApplyOk: "已应用到 {app}。Finder 立即生效；Dock 可能需要重启该应用后刷新。",
-      appResetOk: "已恢复 {app} 的默认图标",
-      appResetNone: "该应用当前没有由 any-icon 应用的自定义图标",
-      appUnsupported: "当前平台暂不支持修改 App 图标",
-      appApplyFail: "应用失败：{msg}",
+      appApply: "设为 dsh 图标",
+      appReset: "恢复原始图标",
+      confirmApply: "替换 dsh 桌面端的应用图标？原始图标已自动备份，可随时还原。首次使用 macOS 可能弹出「App 管理」权限请求，请允许。",
+      confirmReset: "恢复 dsh 桌面端的原始图标？",
+      appApplyOk: "已替换 dsh 图标。若 dsh 正在运行，请完全退出（Cmd+Q）并重新打开即可看到新图标。",
+      appResetOk: "已恢复 dsh 原始图标。若正在运行，重启 dsh 后显示。",
+      appResetNone: "当前没有由 any-icon 替换过的 dsh 图标",
+      appCustomized: "当前已使用自定义图标",
+      appOriginal: "当前为原始图标",
+      appNotRunning: "dsh 桌面端未在运行",
+      appRunning: "dsh 桌面端正在运行",
+      appApplyFail: "操作失败：{msg}",
       appNeedIcon: "请先在下方选择一个图标",
-      appNeedTarget: "请先选择目标应用",
     };
     const en = {
       nav: "Icon Studio",
@@ -120,25 +120,25 @@
       rowMenu: "Custom icon…",
       saved: "Saved",
       applyDefault: "Set as session default",
-      appSection: "App icons",
-      appIntro: "Apply a cropped icon to a real application. On macOS this uses the Finder custom-icon mechanism — bundle contents are never modified, so code signatures stay intact.",
-      appPick: "Target app",
-      appSearch: "Filter apps…",
-      appRefresh: "Reload",
-      appLoading: "Loading app list…",
-      appEmpty: "No matching app",
+      appSection: "dsh icon",
+      appIntro: "Set the cropped icon as the dsh desktop app's own icon (replaces the bundle's icon.icns with an ad-hoc re-sign and refreshes the Dock). The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply.",
+      appPick: "Target",
+      appLoading: "Detecting the dsh desktop app…",
+      appNotFound: "dsh desktop app not found (macOS build expected under /Applications or your Applications folder)",
       appSelectIcon: "Pick an icon (from the library above)",
-      appApply: "Apply icon",
-      appReset: "Restore default icon",
-      confirmApply: "Apply the custom icon to “{app}”? You can restore the default at any time.",
-      confirmReset: "Restore the default icon of “{app}”?",
-      appApplyOk: "Applied to {app}. Finder updates immediately; the Dock may need that app to restart.",
-      appResetOk: "Restored the default icon of {app}",
-      appResetNone: "No any-icon custom icon on this app",
-      appUnsupported: "App icon customization is not supported on this platform yet",
-      appApplyFail: "Apply failed: {msg}",
+      appApply: "Set as dsh icon",
+      appReset: "Restore original icon",
+      confirmApply: "Replace the dsh desktop app's icon? The original is backed up automatically. macOS may show an “App Management” permission prompt on first use — please allow it.",
+      confirmReset: "Restore the dsh desktop app's original icon?",
+      appApplyOk: "dsh icon replaced. If dsh is running, quit it fully (Cmd+Q) and reopen to see the new icon.",
+      appResetOk: "Original dsh icon restored. Restart dsh if it is running.",
+      appResetNone: "No any-icon replacement on the dsh icon right now",
+      appCustomized: "Currently using the custom icon",
+      appOriginal: "Currently the original icon",
+      appNotRunning: "dsh desktop app is not running",
+      appRunning: "dsh desktop app is running",
+      appApplyFail: "Operation failed: {msg}",
       appNeedIcon: "Pick an icon below first",
-      appNeedTarget: "Pick a target app first",
     };
     const FALLBACK = zh;
 
@@ -729,7 +729,7 @@
               )),
             ),
         assigns.defaultIconId ? createElement("p", { className: "dai-note" }, t("defaultHint")) : null,
-        createElement(AppIconSection, { t }),
+        createElement(DshIconSection, { t }),
         createElement("input", {
           ref: fileRef, type: "file", accept: "image/png,image/jpeg,image/webp", style: { display: "none" },
           onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; void pickFile(f); },
@@ -821,64 +821,43 @@
     }
 
     // ------------------------------------------------------------------
-    // App icons: apply a library icon to a real OS application
+    // dsh app icon: replace the dsh desktop bundle's own icon
     // ------------------------------------------------------------------
-    function appNameOf(apps, appPath) {
-      const hit = apps.find((a) => a.path === appPath);
-      if (hit) return hit.name;
-      const base = String(appPath || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || appPath;
-      return base.replace(/\.app$/i, "");
-    }
-
-    function AppIconSection({ t }) {
+    function DshIconSection({ t }) {
       const icons = useStore(iconStore);
-      const [apps, setApps] = React.useState(undefined); // undefined = loading
-      const [platform, setPlatform] = React.useState("");
-      const [supported, setSupported] = React.useState(true);
-      const [query, setQuery] = React.useState("");
-      const [selectedApp, setSelectedApp] = React.useState("");
+      const [state, setState] = React.useState(undefined); // undefined = loading
       const [selectedIconId, setSelectedIconId] = React.useState("");
       const [busy, setBusy] = React.useState(false);
       const [error, setError] = React.useState("");
       const [notice, setNotice] = React.useState("");
       const loadRef = React.useRef(0);
 
-      const loadApps = React.useCallback(() => {
+      const loadState = React.useCallback(() => {
         const seq = ++loadRef.current;
-        setApps(undefined);
+        setState(undefined);
         setError("");
-        callAnyIcon(boundCtx, (svc) => svc.listApps()).then((result) => {
+        callAnyIcon(boundCtx, (svc) => svc.getDshIconState()).then((result) => {
           if (loadRef.current !== seq) return;
-          setApps(result.apps);
-          setPlatform(result.platform);
-          setSupported(result.supported !== false);
-          setSelectedApp((current) => {
-            if (current && result.apps.some((a) => a.path === current)) return current;
-            const preferred = result.apps.find((a) => a.path.indexOf("DeepSeek Harness") >= 0) || result.apps[0];
-            return preferred ? preferred.path : "";
-          });
+          setState(result);
         }).catch((err) => {
           if (loadRef.current !== seq) return;
-          setApps([]);
-          setSupported(false);
           setError(String((err && err.message) || err));
+          setState({ ok: true, found: false, appPath: "", customized: false, running: false });
         });
       }, []);
 
-      React.useEffect(() => { loadApps(); }, [loadApps]);
-
-      const filtered = (apps || []).filter((a) => !query || a.name.toLowerCase().indexOf(query.toLowerCase()) >= 0);
+      React.useEffect(() => { loadState(); }, [loadState]);
 
       const apply = async () => {
         setError(""); setNotice("");
         const icon = icons.icons.find((i) => i.id === selectedIconId);
         if (!icon) { setError(t("appNeedIcon")); return; }
-        if (!selectedApp) { setError(t("appNeedTarget")); return; }
-        if (!window.confirm(format(t("confirmApply"), { app: appNameOf(apps || [], selectedApp) }))) return;
+        if (!window.confirm(t("confirmApply"))) return;
         setBusy(true);
         try {
-          await callAnyIcon(boundCtx, (svc) => svc.applyAppIcon(selectedApp, icon.master));
-          setNotice(format(t("appApplyOk"), { app: appNameOf(apps || [], selectedApp) }));
+          await callAnyIcon(boundCtx, (svc) => svc.applyDshIcon(icon.master));
+          setNotice(t("appApplyOk"));
+          loadState();
         } catch (err) {
           setError(format(t("appApplyFail"), { msg: String((err && err.message) || err) }));
         } finally {
@@ -888,12 +867,12 @@
 
       const resetIcon = async () => {
         setError(""); setNotice("");
-        if (!selectedApp) { setError(t("appNeedTarget")); return; }
-        if (!window.confirm(format(t("confirmReset"), { app: appNameOf(apps || [], selectedApp) }))) return;
+        if (!window.confirm(t("confirmReset"))) return;
         setBusy(true);
         try {
-          const result = await callAnyIcon(boundCtx, (svc) => svc.resetAppIcon(selectedApp));
-          setNotice(result && result.removed ? format(t("appResetOk"), { app: appNameOf(apps || [], selectedApp) }) : t("appResetNone"));
+          const result = await callAnyIcon(boundCtx, (svc) => svc.resetDshIcon());
+          setNotice(result && result.removed ? t("appResetOk") : t("appResetNone"));
+          loadState();
         } catch (err) {
           setError(format(t("appApplyFail"), { msg: String((err && err.message) || err) }));
         } finally {
@@ -901,36 +880,24 @@
         }
       };
 
-      if (apps !== undefined && !supported) {
-        return createElement("div", { className: "dai-panel" },
-          createElement("h4", { style: { margin: "4px 0 0", fontSize: 13 } }, t("appSection")),
-          createElement("p", { className: "dai-note" }, t("appUnsupported")),
-        );
-      }
-
       return createElement("div", { className: "dai-panel" },
         createElement("h4", { style: { margin: "4px 0 0", fontSize: 13 } }, t("appSection")),
         createElement("p", { className: "dai-note" }, t("appIntro")),
-        createElement("div", { className: "dai-row" },
-          createElement("input", {
-            type: "search", className: "dai-input", placeholder: t("appSearch"),
-            value: query, onChange: (e) => setQuery(e.target.value),
-            "aria-label": t("appSearch"),
-          }),
-          createElement(Button, { mini: true, onClick: loadApps }, t("appRefresh")),
-          platform ? createElement("span", { className: "dai-note" }, platform) : null,
-        ),
-        apps === undefined
+        state === undefined
           ? createElement("p", { className: "dai-note" }, t("appLoading"))
-          : createElement("select", {
-              className: "dai-select", multiple: false, size: 6,
-              value: selectedApp, onChange: (e) => setSelectedApp(e.target.value),
-              "aria-label": t("appPick"),
-            },
-              filtered.length === 0
-                ? createElement("option", { value: "", disabled: true }, t("appEmpty"))
-                : filtered.map((a) => createElement("option", { key: a.path, value: a.path }, a.name + " — " + a.path)),
+          : createElement("div", { className: "dai-row" },
+              createElement("span", { className: "dai-note" },
+                state.found
+                  ? t("appPick") + ": " + state.appPath + (state.customized ? "（" + t("appCustomized") + "）" : "（" + t("appOriginal") + "）")
+                  : null,
+              ),
             ),
+        state !== undefined && !state.found
+          ? createElement("p", { className: "dai-error" }, t("appNotFound"))
+          : null,
+        state !== undefined && state.found ? createElement("div", { className: "dai-row" },
+          createElement("span", { className: "dai-note" }, state.running ? t("appRunning") : t("appNotRunning")),
+        ) : null,
         createElement("p", { className: "dai-note" }, t("appSelectIcon")),
         icons.icons.length === 0
           ? createElement("p", { className: "dai-note" }, t("emptyLibrary"))
@@ -944,8 +911,8 @@
               }, createElement("img", { src: icon.thumb, alt: icon.name, className: "dai-iconopt-img", draggable: false }))),
             ),
         createElement("div", { className: "dai-row" },
-          createElement(Button, { primary: true, disabled: busy || !selectedIconId || !selectedApp, onClick: () => void apply() }, t("appApply")),
-          createElement(Button, { disabled: busy || !selectedApp, onClick: () => void resetIcon() }, t("appReset")),
+          createElement(Button, { primary: true, disabled: busy || !selectedIconId || (state !== undefined && !state.found), onClick: () => void apply() }, t("appApply")),
+          createElement(Button, { disabled: busy, onClick: () => void resetIcon() }, t("appReset")),
           busy ? createElement("span", { className: "dai-note" }, "…") : null,
         ),
         error && createElement("p", { className: "dai-error", role: "alert" }, error),
@@ -1022,7 +989,7 @@
       // reload; the bridge round-trip result lands in
       // localStorage["dsh-any-icon.selftest.result"] for automated checks.
       if (typeof localStorage !== "undefined" && localStorage.getItem("dsh-any-icon.selftest") === "1") {
-        callAnyIcon(ctx, (svc) => svc.listApps()).then((result) => {
+        callAnyIcon(ctx, (svc) => svc.getDshIconState()).then((result) => {
           localStorage.setItem("dsh-any-icon.selftest.result", JSON.stringify({ ok: true, rawType: typeof result, keys: result && typeof result === "object" ? Object.keys(result) : String(result), raw: safeJson(result) }));
         }).catch((err) => {
           localStorage.setItem("dsh-any-icon.selftest.result", JSON.stringify({ ok: false, error: String((err && err.message) || err), stack: String(err && err.stack || "").slice(0, 500) }));
