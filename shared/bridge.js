@@ -4,20 +4,19 @@
 // (together with zod) into the client half. `makeBridge` receives the zod v4
 // module namespace so both faces use one schema/descriptor definition.
 //
-// Field shapes mirror the first-party generated descriptors (see
-// @deepseek-ai/dsh-api-remotes client bundle) and the loader-validated
-// manifest contract (see @deepseek-ai/dsh-typert-loader).
+// v2.1 scope: the App-icon feature targets ONLY the dsh desktop app itself —
+// it swaps the bundle's own icon.icns (with backup + ad-hoc re-sign), which
+// rides the native icon pipeline and works on every macOS version.
 
 export function makeBridge(ZOD) {
   const { z } = ZOD;
 
   // ---- wire schemas -------------------------------------------------
-  const AppPath = z.string().min(1).max(1024);
   const PngDataUrl = z.string().regex(/^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/, 'must be a base64 PNG data URL');
   const ApplyResult = z.object({
     ok: z.literal(true),
     appPath: z.string(),
-    method: z.string(),
+    method: z.literal('icns-replace'),
     appliedAt: z.number(),
   });
   const ResetResult = z.object({
@@ -25,11 +24,12 @@ export function makeBridge(ZOD) {
     appPath: z.string(),
     removed: z.boolean(),
   });
-  const AppInfo = z.object({ name: z.string(), path: z.string() });
-  const ListAppsResult = z.object({
-    platform: z.string(),
-    supported: z.boolean(),
-    apps: z.array(AppInfo),
+  const IconState = z.object({
+    ok: z.literal(true),
+    found: z.boolean(),
+    appPath: z.string(),
+    customized: z.boolean(),
+    running: z.boolean(),
   });
 
   function strictCodec(typeSymbol, schema) {
@@ -40,15 +40,14 @@ export function makeBridge(ZOD) {
     return { name, wire: name, source: 'json', codec: strictCodec(typeSymbol, schema) };
   }
 
-  // ---- invocation descriptors ---------------------------------------
+  // ---- invocation descriptors (positional args on the client proxy) --
   const APPLY_DESCRIPTOR = {
-    id: 'dsh-any-icon#anyIcon/applyAppIcon',
+    id: 'dsh-any-icon#anyIcon/applyDshIcon',
     service: 'anyIcon',
     namespace: 'anyIcon',
-    method: 'applyAppIcon',
+    method: 'applyDshIcon',
     invocation: { kind: 'direct' },
     parameters: [
-      jsonParam('appPath', 'dsh-any-icon#AppPath', AppPath),
       jsonParam('pngDataUrl', 'dsh-any-icon#PngDataUrl', PngDataUrl),
     ],
     cancellation: { parameter: 'signal' },
@@ -56,38 +55,36 @@ export function makeBridge(ZOD) {
   };
 
   const RESET_DESCRIPTOR = {
-    id: 'dsh-any-icon#anyIcon/resetAppIcon',
+    id: 'dsh-any-icon#anyIcon/resetDshIcon',
     service: 'anyIcon',
     namespace: 'anyIcon',
-    method: 'resetAppIcon',
+    method: 'resetDshIcon',
     invocation: { kind: 'direct' },
-    parameters: [
-      jsonParam('appPath', 'dsh-any-icon#AppPath', AppPath),
-    ],
+    parameters: [],
     cancellation: { parameter: 'signal' },
     result: strictCodec('dsh-any-icon#ResetResult', ResetResult),
   };
 
-  const LISTAPPS_DESCRIPTOR = {
-    id: 'dsh-any-icon#anyIcon/listApps',
+  const STATE_DESCRIPTOR = {
+    id: 'dsh-any-icon#anyIcon/getDshIconState',
     service: 'anyIcon',
     namespace: 'anyIcon',
-    method: 'listApps',
+    method: 'getDshIconState',
     invocation: { kind: 'direct' },
     parameters: [],
     cancellation: { parameter: 'signal' },
-    result: strictCodec('dsh-any-icon#ListAppsResult', ListAppsResult),
+    result: strictCodec('dsh-any-icon#IconState', IconState),
   };
 
   const TYPERT_REMOTE = {
     package: 'dsh-any-icon',
-    descriptors: [APPLY_DESCRIPTOR, RESET_DESCRIPTOR, LISTAPPS_DESCRIPTOR],
+    descriptors: [APPLY_DESCRIPTOR, RESET_DESCRIPTOR, STATE_DESCRIPTOR],
   };
 
   return {
     z,
-    schemas: { AppPath, PngDataUrl, ApplyResult, ResetResult, AppInfo, ListAppsResult },
-    descriptors: [APPLY_DESCRIPTOR, RESET_DESCRIPTOR, LISTAPPS_DESCRIPTOR],
+    schemas: { PngDataUrl, ApplyResult, ResetResult, IconState },
+    descriptors: [APPLY_DESCRIPTOR, RESET_DESCRIPTOR, STATE_DESCRIPTOR],
     TYPERT_REMOTE,
   };
 }
