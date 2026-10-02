@@ -1,7 +1,7 @@
 {
   "name": "dsh-any-icon",
-  "description": "Upload an image, crop it to a 1:1 icon, and assign it to dsh surfaces (session rows). Pure client-side bundle.",
-  "version": "0.1.0",
+  "description": "Upload an image, crop it to a 1:1 icon, use it as the dsh desktop app icon (instant update across Finder / Apps / Dock, no restart) or assign it to dsh session rows.",
+  "version": "0.3.0",
   "publishConfig": {
     "access": "public"
   },

@@ -53,3 +53,24 @@ window.__ModuleLoader__.load({
 - 开发自测：`dsh web --profile web`（0.1.7-rc.2，link: 装入 web profile）。
 - 用户环境：桌面版 0.2.0-rc.2（desktop profile）——两个 Slot 均已在其源码中确认；0.2.0-rc.2 实测由用户安装后进行。
 - 防御性设计：Slot 注入全部走 `ctx.slots.inject`（Slot 不存在时不崩溃），`require` 前不假设导出存在。
+
+## 6. App 图标实时生效（v0.3.0 实测，macOS 26.6.2 / 桌面版 0.2.0-rc.2）
+
+旧版（文档内曾称 v2.1）的「应用后 dsh 自动重启」看似可行，实际有两个硬伤：一是 `codesign` 与自定义图标不能共存，二是重启本身就不是「实时」。逐条实测结论：
+
+| # | 结论 | 证据 / 复现 |
+|---|---|---|
+| 1 | Host 半体运行在**子进程**（`ELECTRON_RUN_AS_NODE` 模式启动的 Electron 二进制 + `@deepseek-ai/dsh-desktop-host`），拿不到 Electron 主进程的 `app.dock.setIcon` | 桌面 `lib/main.js`：`spawn(this.node, ["--expose-internals", entry, ...])`；`ps` 里对应 `.../MacOS/DeepSeek Harness --expose-internals .../dsh-desktop-host/lib/index.js` |
+| 2 | **`codesign` 拒绝给带自定义图标的应用包签名**：`resource fork, Finder information, or similar detritus not allowed`。清掉包根 `com.apple.FinderInfo` 后立刻成功 | 克隆应用包实测：带自定义图标 → 失败；`xattr -d com.apple.FinderInfo` → 成功。这解释了旧版「第二次应用必然失败、图标文件已改但界面无反应」 |
+| 3 | 1 GB Electron 应用包的 ad-hoc 重签名只需 **~0.9 秒**，不必异步、不必重启应用 | `time codesign --force --sign - <克隆>` |
+| 4 | `NSWorkspace.setIcon:forFile:options:` 写的自定义图标落在包根 `Icon\r` 的 **`com.apple.ResourceFork` 扩展属性**里（数据分支为 0 字节），同时置 FinderInfo 的 `kHasCustomIcon`(0x0400) 位；`NSWorkspace.icon(forFile:)` 立刻返回该图 —— 访达 / 应用程序 / Dock 读的就是它 | JXA 写入后读回，并把 `icon(forFile:)` 渲染成 PNG 比对 |
+| 5 | 让 **正在运行**的应用的 Dock 图标刷新：调用私有 `SLSIconAppearanceConfiguration.fetchCurrentIconAppearanceConfiguration` → `save`（系统设置切换图标外观时发的同一条通知），Dock 随即重建 `$DARWIN_USER_CACHE_DIR/com.apple.dock.iconcache` | 对照实验：静置 8 秒 iconcache mtime 不变；执行该通知后 3 秒内 mtime 更新。类/选择器在本机存在（`NSClassFromString` 命中，`save` 可调用） |
+| 6 | `iconservicesagent` 忽略 SIGTERM，必须 `killall -9`；且必须先杀它再删磁盘缓存，否则它临死把内存里的旧位图写回 | 与旧版注释一致，复测确认 |
+| 7 | 不需要 `killall Dock` / `killall Finder`，也不需要 `defaults write com.apple.dock ResetLaunchPad`（后者会清空用户启动台布局，旧版实测已在用户机上留下 `ResetLaunchPad = 1`） | 无 Dock/Finder 进程被杀，访达 / 应用程序 / Dock 均更新 |
+
+端到端实测（`DSH_ANY_ICON_APP_PATH=<克隆>`，`HOME` 重定向以隔离 manifest/backup）：
+
+- 首次应用 4.5 s（冷启动 sips），二次应用 1.5 s，签名 `valid`，`live/native/dockRefreshed` 全为 true；
+- 在「旧版遗留状态」（包根已有 `Icon\r` + FinderInfo 标志）的应用包上应用同样成功 —— 迁移路径可用；
+- 恢复：450 ms，清掉 `Icon\r` 与 FinderInfo 标志，并从备份还原出**原始 Developer ID 签名**（`codesign --verify` 通过）；
+- 备份绑定了 `CFBundleShortVersionString`：版本不匹配时跳过字节还原，避免把 dsh 自动更新后的新可执行文件换回旧版。
