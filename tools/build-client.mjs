@@ -17,9 +17,14 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ESBUILD = ['npx', '-y', 'esbuild@0.25.0']
+// zod is vendored into the committed artifacts; the build only needs it at
+// bundle time. Point ZOD_ALIAS at a zod@4 install (e.g. from `npm install
+// --prefix /tmp/zod-build zod@4`) or rely on normal node_modules resolution.
+const ZOD_ALIAS = process.env.ZOD_ALIAS || 'zod'
+const ALIAS = ['--alias:zod=' + ZOD_ALIAS]
 
 function run(args, cwd = root) {
-  execFileSync(ESBUILD[0], [...ESBUILD.slice(1), ...args], { cwd, stdio: 'inherit' })
+  execFileSync(ESBUILD[0], [...ESBUILD.slice(1), ...ALIAS, ...args], { cwd, stdio: 'inherit' })
 }
 
 // 1) Host-face zod bundle (ESM).
