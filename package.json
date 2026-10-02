@@ -1,0 +1,39 @@
+{
+  "name": "dsh-any-icon",
+  "description": "Upload an image, crop it to a 1:1 icon, and assign it to dsh surfaces (session rows). Pure client-side bundle.",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "LICENSE",
+    "README.md"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ]
+    }
+  }
+}

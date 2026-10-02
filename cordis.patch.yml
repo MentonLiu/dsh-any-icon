@@ -1,0 +1,4 @@
+# dsh-any-icon bundle patch: insert only our plugin row.
+- insert:
+    - id: any-icon
+      name: dsh-any-icon
