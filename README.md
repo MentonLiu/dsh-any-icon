@@ -2,7 +2,7 @@
 
 一个 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 插件：**上传图片 → 自由裁剪为 1:1 → 两类用途**：
 
-1. **App 图标（系统级）**：把图标应用到真实的 macOS 应用（Finder 自定义图标机制，不改应用包内容、不影响代码签名），支持一键恢复默认；Windows .lnk 快捷方式为实验性支持。
+1. **App 图标（系统级，v2.1）**：把图标设为 **dsh 桌面端自己**的应用图标。机制为替换应用包内 `Contents/Resources/icon.icns` + ad-hoc 重签名 + 刷新 Dock——原生图标管线，Finder/Dock/启动台全部生效；原始图标字节级备份，一键还原后原签名重新有效。首次使用 macOS 可能要求「App 管理」权限。
 2. **会话图标（dsh 界面内）**：侧栏会话行渲染自定义 16px 图标，任意会话的 `…` 菜单一键分配。
 
 在 dsh 的设置页提供「图标工坊」（Icon Studio）面板完成上述全部流程。
