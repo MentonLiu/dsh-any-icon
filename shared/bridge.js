@@ -4,9 +4,11 @@
 // (together with zod) into the client half. `makeBridge` receives the zod v4
 // module namespace so both faces use one schema/descriptor definition.
 //
-// v2.1 scope: the App-icon feature targets ONLY the dsh desktop app itself —
-// it swaps the bundle's own icon.icns (with backup + ad-hoc re-sign), which
-// rides the native icon pipeline and works on every macOS version.
+// v0.3.0 scope: the App-icon feature targets ONLY the dsh desktop app itself.
+// Two layers land in one apply — the bundle's own icon.icns (with backup +
+// ad-hoc re-sign) and the live Finder custom icon (NSWorkspace) — followed by
+// an icon-cache refresh that makes Finder / the Apps view / the Dock update
+// immediately, without restarting dsh.
 
 export function makeBridge(ZOD) {
   const { z } = ZOD;
@@ -19,13 +21,22 @@ export function makeBridge(ZOD) {
   const ApplyResult = z.object({
     ok: z.literal(true),
     appPath: z.string(),
-    method: z.literal('icns-replace'),
+    method: z.string(),
     appliedAt: z.number(),
+    // Which layers landed: the live Finder custom icon and the bundle's icns.
+    live: z.boolean(),
+    native: z.string(),
+    nativeError: z.string(),
+    dockRefreshed: z.boolean(),
+    elapsedMs: z.number(),
   });
   const ResetResult = z.object({
     ok: z.literal(true),
     appPath: z.string(),
     removed: z.boolean(),
+    live: z.boolean(),
+    signature: z.string(),
+    dockRefreshed: z.boolean(),
   });
   const IconState = z.object({
     ok: z.literal(true),
@@ -33,6 +44,17 @@ export function makeBridge(ZOD) {
     appPath: z.string(),
     customized: z.boolean(),
     running: z.boolean(),
+    // Live Finder custom icon — what Finder / the Apps view / the Dock read first.
+    customIcon: z.boolean(),
+    // The bundle's own icon.icns was replaced by any-icon.
+    nativeIcon: z.boolean(),
+    // CFBundleShortVersionString of the app bundle that is on disk right now.
+    bundleVersion: z.string(),
+    // 'adhoc' | 'developer-id' | 'signed' | 'unsigned' | 'unknown'
+    signature: z.string(),
+    // 'idle' | 'done' | 'failed'
+    native: z.string(),
+    nativeError: z.string(),
   });
 
   function strictCodec(typeSymbol, schema) {

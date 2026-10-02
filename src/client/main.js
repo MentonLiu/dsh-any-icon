@@ -61,22 +61,32 @@
       saved: "已保存",
       applyDefault: "设为此会话默认",
       appSection: "dsh 图标",
-      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。点击「设为 dsh 图标」后 dsh 会自动重启（约 5 秒）实时生效：Dock、关于面板、访达全部更新。原始图标字节级备份可一键还原；dsh 自动更新后图标会被还原，可重新应用。",
+      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。点「设为 dsh 图标」后立即生效：访达 / 应用程序 / Dock 一起更新，不重启 dsh、不打断正在运行的任务。原始图标已字节级备份，可一键还原；dsh 自动更新后会还原图标，重新应用即可。首次使用 macOS 可能要求「App 管理」权限。",
       appPick: "当前目标",
       appLoading: "正在检测 dsh 桌面端…",
       appNotFound: "未找到 dsh 桌面端（需要 macOS 版并安装在 /Applications 或「应用程序」文件夹）",
       appSelectIcon: "选择图标（来自上方图库）",
       appApply: "设为 dsh 图标",
       appReset: "恢复原始图标",
-      confirmApply: "替换 dsh 桌面端的应用图标？点击后 dsh 将在几秒内自动重启以实时生效，正在运行的任务会中断。原始图标已自动备份，可随时还原。首次使用 macOS 可能弹出「App 管理」权限请求，请允许。",
-      confirmReset: "恢复 dsh 桌面端的原始图标？点击后 dsh 将自动重启以实时生效，正在运行的任务会中断。",
-      appApplyOk: "已替换 dsh 图标，dsh 正在自动重启，重启完成后 Dock / 关于面板 / 访达将全部显示新图标。",
-      appResetOk: "已恢复 dsh 原始图标，dsh 正在自动重启。",
+      confirmApply: "替换 dsh 桌面端的应用图标？立即生效：访达 / 应用程序 / Dock 同步更新，不会重启 dsh。原始图标已自动备份，可随时还原。首次使用 macOS 可能弹出「App 管理」权限请求，请允许。",
+      confirmReset: "恢复 dsh 桌面端的原始图标？立即生效：访达 / 应用程序 / Dock 同步更新，不会重启 dsh。",
+      appApplyOk: "已应用新图标，访达 / 应用程序 / Dock 已同步更新。",
+      appApplyPartial: "图标已生效，但原生图标层（App 包内 icon.icns）更新失败：{msg}",
+      appResetOk: "已恢复 dsh 原始图标，访达 / 应用程序 / Dock 已同步更新。",
       appResetNone: "当前没有由 any-icon 替换过的 dsh 图标",
       appCustomized: "当前已使用自定义图标",
       appOriginal: "当前为原始图标",
       appNotRunning: "dsh 桌面端未在运行",
       appRunning: "dsh 桌面端正在运行",
+      appLive: "实时图标（访达 / 应用程序 / Dock）",
+      appLiveOn: "已生效",
+      appLiveOff: "未生效",
+      appNative: "原生图标（App 包内）",
+      appNativeOn: "已替换",
+      appNativeOff: "未替换",
+      appSignature: "签名",
+      appVersion: "版本",
+      appAboutHint: "访达 / 应用程序 / Dock 立即更新；dsh 自身的「关于」面板在下次启动 dsh 时更新。",
       appApplyFail: "操作失败：{msg}",
       appNeedIcon: "请先在下方选择一个图标",
     };
@@ -121,22 +131,32 @@
       saved: "Saved",
       applyDefault: "Set as session default",
       appSection: "dsh icon",
-      appIntro: "Set the cropped icon as the dsh desktop app's own icon (replaces the bundle's icon.icns with an ad-hoc re-sign and refreshes the Dock). The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply.",
+      appIntro: "Set the cropped icon as the dsh desktop app's own icon. It takes effect the moment you apply it: Finder / the Apps view / the Dock all update together, without restarting dsh or interrupting running work. The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply.",
       appPick: "Target",
       appLoading: "Detecting the dsh desktop app…",
       appNotFound: "dsh desktop app not found (macOS build expected under /Applications or your Applications folder)",
       appSelectIcon: "Pick an icon (from the library above)",
       appApply: "Set as dsh icon",
       appReset: "Restore original icon",
-      confirmApply: "Replace the dsh desktop app's icon? The original is backed up automatically. macOS may show an “App Management” permission prompt on first use — please allow it.",
-      confirmReset: "Restore the dsh desktop app's original icon?",
-      appApplyOk: "dsh icon replaced. If dsh is running, quit it fully (Cmd+Q) and reopen to see the new icon.",
-      appResetOk: "Original dsh icon restored. Restart dsh if it is running.",
+      confirmApply: "Replace the dsh desktop app's icon? It takes effect immediately — Finder / the Apps view / the Dock update together and dsh is not restarted. The original is backed up automatically. macOS may show an “App Management” permission prompt on first use — please allow it.",
+      confirmReset: "Restore the dsh desktop app's original icon? It takes effect immediately and dsh is not restarted.",
+      appApplyOk: "New icon applied — Finder / the Apps view / the Dock are updated.",
+      appApplyPartial: "The icon is live, but the native layer (the bundle's icon.icns) failed: {msg}",
+      appResetOk: "Original dsh icon restored — Finder / the Apps view / the Dock are updated.",
       appResetNone: "No any-icon replacement on the dsh icon right now",
       appCustomized: "Currently using the custom icon",
       appOriginal: "Currently the original icon",
       appNotRunning: "dsh desktop app is not running",
       appRunning: "dsh desktop app is running",
+      appLive: "Live icon (Finder / Apps / Dock)",
+      appLiveOn: "active",
+      appLiveOff: "not active",
+      appNative: "Native icon (inside the bundle)",
+      appNativeOn: "replaced",
+      appNativeOff: "not replaced",
+      appSignature: "Signature",
+      appVersion: "Version",
+      appAboutHint: "Finder / the Apps view / the Dock update right away; dsh's own About panel picks the icon up the next time dsh starts.",
       appApplyFail: "Operation failed: {msg}",
       appNeedIcon: "Pick an icon below first",
     };
@@ -829,6 +849,7 @@
       const [selectedIconId, setSelectedIconId] = React.useState("");
       const [busy, setBusy] = React.useState(false);
       const [error, setError] = React.useState("");
+      const [warning, setWarning] = React.useState("");
       const [notice, setNotice] = React.useState("");
       const loadRef = React.useRef(0);
 
@@ -842,21 +863,28 @@
         }).catch((err) => {
           if (loadRef.current !== seq) return;
           setError(String((err && err.message) || err));
-          setState({ ok: true, found: false, appPath: "", customized: false, running: false });
+          setState({
+            ok: true, found: false, appPath: "", customized: false, running: false,
+            customIcon: false, nativeIcon: false, bundleVersion: "", signature: "unknown", native: "idle", nativeError: "",
+          });
         });
       }, []);
 
       React.useEffect(() => { loadState(); }, [loadState]);
 
       const apply = async () => {
-        setError(""); setNotice("");
+        setError(""); setWarning(""); setNotice("");
         const icon = icons.icons.find((i) => i.id === selectedIconId);
         if (!icon) { setError(t("appNeedIcon")); return; }
         if (!window.confirm(t("confirmApply"))) return;
         setBusy(true);
         try {
-          await callAnyIcon(boundCtx, (svc) => svc.applyDshIcon(icon.master));
-          setNotice(t("appApplyOk"));
+          const result = await callAnyIcon(boundCtx, (svc) => svc.applyDshIcon(icon.master));
+          if (result && result.native === "failed") {
+            setWarning(format(t("appApplyPartial"), { msg: result.nativeError || "" }));
+          } else {
+            setNotice(t("appApplyOk"));
+          }
           loadState();
         } catch (err) {
           setError(format(t("appApplyFail"), { msg: String((err && err.message) || err) }));
@@ -866,7 +894,7 @@
       };
 
       const resetIcon = async () => {
-        setError(""); setNotice("");
+        setError(""); setWarning(""); setNotice("");
         if (!window.confirm(t("confirmReset"))) return;
         setBusy(true);
         try {
@@ -880,6 +908,14 @@
         }
       };
 
+      const statusLine = state === undefined ? null : [
+        t("appLive") + "：" + (state.customIcon ? t("appLiveOn") : t("appLiveOff")),
+        t("appNative") + "：" + (state.nativeIcon ? t("appNativeOn") : t("appNativeOff")),
+        t("appSignature") + "：" + (state.signature || "unknown"),
+        state.bundleVersion ? t("appVersion") + "：" + state.bundleVersion : null,
+        state.running ? t("appRunning") : t("appNotRunning"),
+      ].filter(Boolean).join(" · ");
+
       return createElement("div", { className: "dai-panel" },
         createElement("h4", { style: { margin: "4px 0 0", fontSize: 13 } }, t("appSection")),
         createElement("p", { className: "dai-note" }, t("appIntro")),
@@ -888,16 +924,16 @@
           : createElement("div", { className: "dai-row" },
               createElement("span", { className: "dai-note" },
                 state.found
-                  ? t("appPick") + ": " + state.appPath + (state.customized ? "（" + t("appCustomized") + "）" : "（" + t("appOriginal") + "）")
+                  ? t("appPick") + ": " + state.appPath + "（" + (state.customized ? t("appCustomized") : t("appOriginal")) + "）"
                   : null,
               ),
             ),
+        statusLine ? createElement("div", { className: "dai-row" },
+          createElement("span", { className: "dai-note" }, statusLine),
+        ) : null,
         state !== undefined && !state.found
           ? createElement("p", { className: "dai-error" }, t("appNotFound"))
           : null,
-        state !== undefined && state.found ? createElement("div", { className: "dai-row" },
-          createElement("span", { className: "dai-note" }, state.running ? t("appRunning") : t("appNotRunning")),
-        ) : null,
         createElement("p", { className: "dai-note" }, t("appSelectIcon")),
         icons.icons.length === 0
           ? createElement("p", { className: "dai-note" }, t("emptyLibrary"))
@@ -915,7 +951,9 @@
           createElement(Button, { disabled: busy, onClick: () => void resetIcon() }, t("appReset")),
           busy ? createElement("span", { className: "dai-note" }, "…") : null,
         ),
+        createElement("p", { className: "dai-note" }, t("appAboutHint")),
         error && createElement("p", { className: "dai-error", role: "alert" }, error),
+        warning && createElement("p", { className: "dai-error", role: "alert" }, warning),
         notice && createElement("p", { className: "dai-ok", role: "status" }, notice),
       );
     }
