@@ -10,12 +10,15 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./client/client.js",
+    "./remote": "./lib/remote.js",
+    "./typert": "./lib/typert.host.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "files": [
     "lib",
     "client",
+    "shared",
     "cordis.patch.yml",
     "LICENSE",
     "README.md"
