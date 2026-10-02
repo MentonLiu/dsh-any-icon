@@ -12,7 +12,10 @@ export function makeBridge(ZOD) {
   const { z } = ZOD;
 
   // ---- wire schemas -------------------------------------------------
-  const PngDataUrl = z.string().regex(/^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/, 'must be a base64 PNG data URL');
+  // Masters are data URLs produced by the client canvas; Chromium exports
+  // WebP, WebKit falls back to PNG — both are accepted (sips reads either).
+  const IconDataUrl = z.string().regex(/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=\r\n]+$/, 'must be a base64 PNG or WebP data URL');
+  const PngDataUrl = IconDataUrl;
   const ApplyResult = z.object({
     ok: z.literal(true),
     appPath: z.string(),
