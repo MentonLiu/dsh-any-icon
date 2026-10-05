@@ -74,3 +74,40 @@ window.__ModuleLoader__.load({
 - 在「旧版遗留状态」（包根已有 `Icon\r` + FinderInfo 标志）的应用包上应用同样成功 —— 迁移路径可用；
 - 恢复：450 ms，清掉 `Icon\r` 与 FinderInfo 标志，并从备份还原出**原始 Developer ID 签名**（`codesign --verify` 通过）；
 - 备份绑定了 `CFBundleShortVersionString`：版本不匹配时跳过字节还原，避免把 dsh 自动更新后的新可执行文件换回旧版。
+
+## 7. macOS Dock 遮罩形状校准（mac-dock 裁剪规格，实测）
+
+目标：给「macOS Dock」输出规格找到连续曲率遮罩的可靠数学形态。过程全为本机实测（macOS 26.6.2）。
+
+**基准获取的坑**：
+
+- 系统 App 的 icns 里是**全出血原画**（Notes 的 alpha 左边界 L=0 可证），squircle 遮罩是系统合成时才加的——直接测 icns 拿不到遮罩形状。
+- `NSWorkspace.sharedWorkspace.iconForFile(...)` 渲染出的 1024 图**带不透明黑色背板**（alpha 无边界可用）；但 margin=99.5 / graphic=825.0 与模板 100/824 吻合，证明 Tahoe 渲染的仍是经典几何。
+- `sips -s format bmp` 的 BMP 输出行序不可靠（重排成对角花纹），校准管线改用自写 PNG 解码（zlib inflate + unfilter，支持 8/16bit）。
+- 亚像素边界：alpha 阈值 128 的线性插值 crossing；曲率数值微分对采样密度敏感，网格须配线性插值查表（整数行取整会有采样空洞，曾据此误判「G2 族 1.8× 优于 superellipse」）。
+
+**实测结论**：
+
+| 模型 | 最优参数 | 对真实遮罩 rms（@1024） |
+|---|---|---|
+| 圆角矩形（纯圆弧） | R=156.5 | 26.9px |
+| superellipse `\|x/a\|^n+\|y/a\|^n=1` | n=4.32 | 22.0px |
+| G2 构造（R185.4 弧 + 渐变 cubic，β/w 扫描） | β≈44°, w≈7 | 20.6px |
+
+三个双参数族谁也不能精确贴合（最优也在 ~2.5% 图形边长量级）——Apple 用的自有样条不在其中。残差呈系统性：顶点区贴近平坦、角部中段更胖，任何单一指数/单弧+单坡都无法同时满足。
+
+**工程决策**：按用户规格字面实现 **G2 连续曲率圆角矩形**（`shared/squircle.js`）——「连续曲率」由构造保证（cubic 坡的 κ(0)=0 / κ(arc)=1/R 端点约束解析成立），「R185.4」是构造中真实存在的 30° 圆弧段。常数 (β=30°, w=2) 为该族低曲率超调点（坡内峰值 κ=1.19/R，有效最小半径 156px@824）。真实遮罩与我们的差 ≤2.5% 图形边长，Dock 128px 渲染下 <3px，不可见。
+
+**复现**：
+
+```bash
+# 基准渲染（NSWorkspace 走系统合成管线，得到 Dock 实际显示的遮罩）
+osascript -l JavaScript -e 'ObjC.import("AppKit")
+const icon = $.NSWorkspace.sharedWorkspace.iconForFile("/System/Applications/Calculator.app")
+icon.setSize($.NSMakeSize(1024, 1024))
+const rep = $.NSBitmapImageRep.imageRepWithData(icon.TIFFRepresentation)
+rep.representationUsingTypeProperties($.NSBitmapImageFileTypePNG, $.NSDictionary.dictionary)
+  .writeToFileAtomically("/tmp/dai-calib/calc-rendered.png", true)'
+# 几何断言 + 形状预览（squircle vs 同半径圆角矩形）
+node tools/verify-squircle.mjs --render   # → artifacts/squircle-preview.png
+```
