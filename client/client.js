@@ -80,6 +80,7 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
     const NS = "anyIcon";
     const LS_ICONS = "dsh-any-icon.icons.v1";
     const LS_ASSIGN = "dsh-any-icon.assign.v1";
+    const LS_CROP_SPEC = "dsh-any-icon.cropspec";
     const MASTER = 512;          // stored master edge, px
     const THUMB = 128;           // stored thumbnail edge, px
     const MAX_INPUT_BYTES = 20 * 1024 * 1024;
@@ -87,6 +88,12 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
     const PACK_SIZES = [512, 256, 128, 64];
     const CANVAS = 640;          // internal crop-editor resolution
     const WINDOW_RATIO = 0.72;   // crop window side / canvas side
+    // Output specs. "mac-dock" renders the macOS app-icon document (see
+    // __DAI_SQUIRCLE__/shared/squircle.js): 1024 canvas, 824 graphic, 100px
+    // transparent margins, continuous-curvature (squircle) mask.
+    const SPEC_SQUARE = "square";
+    const SPEC_MAC = "mac-dock";
+    const { MAC_ICON_SPEC: MAC_SPEC, squirclePathData } = __DAI_SQUIRCLE__;
 
     // ------------------------------------------------------------------
     // Locale
@@ -95,6 +102,11 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       nav: "图标工坊",
       title: "图标工坊",
       intro: "上传图片，裁成 1:1 图标，应用到会话列表。图标保存在本机浏览器中。",
+      specLabel: "输出规格",
+      specSquare: "标准 1:1",
+      specMac: "macOS Dock",
+      specMacNote: "输出 1024×1024：824 图形 + 四周 100px 透明边距，连续曲率圆角（squircle）——符合 macOS 应用图标规格。建议原图边长 ≥ 1024px。",
+      badgeMac: "macOS",
       upload: "上传图片",
       uploadHint: "支持 PNG / JPG / WebP，建议边长 ≥ 512px",
       cropTitle: "裁剪为 1:1",
@@ -132,7 +144,7 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       saved: "已保存",
       applyDefault: "设为此会话默认",
       appSection: "dsh 图标",
-      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。点「设为 dsh 图标」后立即生效：访达 / 应用程序 / Dock 一起更新，不重启 dsh、不打断正在运行的任务。原始图标已字节级备份，可一键还原；dsh 自动更新后会还原图标，重新应用即可。首次使用 macOS 可能要求「App 管理」权限。",
+      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。点「设为 dsh 图标」后立即生效：访达 / 应用程序 / Dock 一起更新，不重启 dsh、不打断正在运行的任务。原始图标已字节级备份，可一键还原；dsh 自动更新后会还原图标，重新应用即可。首次使用 macOS 可能要求「App 管理」权限。建议使用「macOS Dock」规格裁剪的图标。",
       appPick: "当前目标",
       appLoading: "正在检测 dsh 桌面端…",
       appNotFound: "未找到 dsh 桌面端（需要 macOS 版并安装在 /Applications 或「应用程序」文件夹）",
@@ -165,6 +177,11 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       nav: "Icon Studio",
       title: "Icon Studio",
       intro: "Upload an image, crop it to a 1:1 icon and assign it to session rows. Icons are stored in this browser.",
+      specLabel: "Output spec",
+      specSquare: "Standard 1:1",
+      specMac: "macOS Dock",
+      specMacNote: "Outputs 1024×1024: an 824 graphic with 100px transparent margins and continuous-curvature corners (squircle) — matches the macOS app icon spec. Source edge ≥ 1024px recommended.",
+      badgeMac: "macOS",
       upload: "Upload image",
       uploadHint: "PNG / JPG / WebP, edge ≥ 512px recommended",
       cropTitle: "Crop to 1:1",
@@ -202,7 +219,7 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       saved: "Saved",
       applyDefault: "Set as session default",
       appSection: "dsh icon",
-      appIntro: "Set the cropped icon as the dsh desktop app's own icon. It takes effect the moment you apply it: Finder / the Apps view / the Dock all update together, without restarting dsh or interrupting running work. The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply.",
+      appIntro: "Set the cropped icon as the dsh desktop app's own icon. It takes effect the moment you apply it: Finder / the Apps view / the Dock all update together, without restarting dsh or interrupting running work. The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply. Icons cropped with the “macOS Dock” spec make the best app icons.",
       appPick: "Target",
       appLoading: "Detecting the dsh desktop app…",
       appNotFound: "dsh desktop app not found (macOS build expected under /Applications or your Applications folder)",
@@ -307,7 +324,9 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       },
       importAll(payload) {
         if (!payload || payload.v !== 1 || !Array.isArray(payload.icons)) return { ok: false, invalid: true };
-        const icons = payload.icons.filter((i) => i && typeof i.id === "string" && typeof i.master === "string" && typeof i.thumb === "string");
+        const icons = payload.icons
+          .filter((i) => i && typeof i.id === "string" && typeof i.master === "string" && typeof i.thumb === "string")
+          .map((i) => ({ ...i, spec: i.spec === SPEC_MAC ? SPEC_MAC : SPEC_SQUARE }));
         const bySession = {};
         const a = payload.assignments && typeof payload.assignments === "object" ? payload.assignments : {};
         if (a.bySession && typeof a.bySession === "object") {
@@ -420,6 +439,32 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       return String(name || "icon").replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "icon";
     }
 
+    // Crop-spec preference survives across crops and sessions.
+    function loadCropSpec() {
+      try { return localStorage.getItem(LS_CROP_SPEC) === SPEC_MAC ? SPEC_MAC : SPEC_SQUARE; }
+      catch { return SPEC_SQUARE; }
+    }
+
+    function saveCropSpec(spec) {
+      try { localStorage.setItem(LS_CROP_SPEC, spec === SPEC_MAC ? SPEC_MAC : SPEC_SQUARE); } catch { /* preference only */ }
+    }
+
+    // The macOS Dock document: 1024×1024, the cropped square scaled into the
+    // central 824 box and clipped by the squircle (100px transparent margins).
+    function renderMacDockDoc(img, sx, sy, sw) {
+      const doc = document.createElement("canvas");
+      doc.width = MAC_SPEC.canvas; doc.height = MAC_SPEC.canvas;
+      const ctx = doc.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.save();
+      ctx.translate(MAC_SPEC.margin, MAC_SPEC.margin);
+      ctx.clip(new Path2D(squirclePathData(MAC_SPEC.graphic)));
+      ctx.drawImage(img, sx, sy, sw, sw, 0, 0, MAC_SPEC.graphic, MAC_SPEC.graphic);
+      ctx.restore();
+      return doc;
+    }
+
     // ------------------------------------------------------------------
     // Styles (single injected sheet, removed with the plugin)
     // ------------------------------------------------------------------
@@ -442,6 +487,7 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       ".dai-card-img{width:64px;height:64px;border-radius:14px;object-fit:cover;display:block;background:var(--dsw-alias-bg-layer-2,rgba(127,127,127,.1))}",
       ".dai-card-name{font-size:12px;line-height:1.4;color:var(--dsw-alias-label-secondary);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
       ".dai-badge{font-size:10px;line-height:16px;padding:0 7px;border-radius:999px;background:var(--dsw-alias-state-business-primary,#4c7dff);color:var(--dsw-alias-bg-layer-3,#fff);align-self:center}",
+      ".dai-badge-soft{background:var(--dsw-alias-label-tertiary,rgba(127,127,127,.55))}",
       ".dai-card-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}",
       ".dai-mini{padding:2px 8px;font-size:11px;line-height:17px}",
       ".dai-crop-wrap{display:flex;flex-direction:column;gap:10px;align-items:center}",
@@ -475,9 +521,9 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
     // ------------------------------------------------------------------
     // Shared UI atoms
     // ------------------------------------------------------------------
-    function Button({ primary, danger, mini, disabled, onClick, children, title }) {
+    function Button({ primary, danger, mini, disabled, onClick, children, title, pressed }) {
       const cls = "dai-btn" + (primary ? " dai-btn-primary" : "") + (danger ? " dai-btn-danger" : "") + (mini ? " dai-mini" : "");
-      return createElement("button", { type: "button", className: cls, disabled, onClick, title }, children);
+      return createElement("button", { type: "button", className: cls, disabled, onClick, title, "aria-pressed": pressed }, children);
     }
 
     function useStore(store) {
@@ -552,6 +598,7 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       const windowSize = Math.round(CANVAS * WINDOW_RATIO);
       const winX = (CANVAS - windowSize) / 2;
       const winY = (CANVAS - windowSize) / 2;
+      const [spec, setSpec] = React.useState(loadCropSpec);
 
       const cover = Math.max(windowSize / img.naturalWidth, windowSize / img.naturalHeight);
       const maxScale = cover * 8;
@@ -586,15 +633,26 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
         ctx.fillRect(0, winY + windowSize, CANVAS, CANVAS - winY - windowSize);
         ctx.fillRect(0, winY, winX, windowSize);
         ctx.fillRect(winX + windowSize, winY, CANVAS - winX - windowSize, windowSize);
-        // Window frame + circle guide.
+        // Window frame + guide: the shape the exported icon's graphic will
+        // carry — circle for the square spec, the squircle for macOS Dock.
         ctx.strokeStyle = "rgba(255,255,255,0.95)";
         ctx.lineWidth = 2;
         ctx.strokeRect(winX + 1, winY + 1, windowSize - 2, windowSize - 2);
-        ctx.beginPath();
-        ctx.arc(CANVAS / 2, CANVAS / 2, windowSize / 2 - 2, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,255,255,0.4)";
-        ctx.stroke();
-      }, [img]);
+        if (spec === SPEC_MAC) {
+          ctx.save();
+          ctx.translate(winX, winY);
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(255,255,255,0.4)";
+          ctx.lineWidth = 2;
+          ctx.stroke(new Path2D(squirclePathData(windowSize)));
+          ctx.restore();
+        } else {
+          ctx.beginPath();
+          ctx.arc(CANVAS / 2, CANVAS / 2, windowSize / 2 - 2, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255,255,255,0.4)";
+          ctx.stroke();
+        }
+      }, [img, spec]);
 
       React.useEffect(() => { draw(); }, [draw]);
 
@@ -664,14 +722,36 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
         const sx = (winX - v.ox) / v.scale;
         const sy = (winY - v.oy) / v.scale;
         const sw = windowSize / v.scale;
+        if (spec === SPEC_MAC) {
+          const doc = renderMacDockDoc(img, sx, sy, sw);
+          const thumb = document.createElement("canvas");
+          thumb.width = THUMB; thumb.height = THUMB;
+          const tctx = thumb.getContext("2d");
+          tctx.imageSmoothingQuality = "high";
+          tctx.drawImage(doc, 0, 0, THUMB, THUMB);
+          onConfirm({ master: encodeCanvas(doc), thumb: encodeCanvas(thumb), spec: SPEC_MAC });
+          return;
+        }
         const master = encodeCanvas(extractSquare(img, sx, sy, sw, MASTER));
         const thumb = encodeCanvas(extractSquare(img, sx, sy, sw, THUMB));
-        onConfirm({ master, thumb });
+        onConfirm({ master, thumb, spec: SPEC_SQUARE });
       };
 
       return createElement("div", { className: "dai-panel" },
         createElement("h3", { style: { margin: 0, fontSize: 15 } }, t("cropTitle")),
         createElement("p", { className: "dai-note" }, t("cropHint")),
+        createElement("div", { className: "dai-row", role: "group", "aria-label": t("specLabel") },
+          createElement("span", { className: "dai-note" }, t("specLabel")),
+          createElement(Button, {
+            mini: true, primary: spec === SPEC_SQUARE, pressed: spec === SPEC_SQUARE,
+            onClick: () => { setSpec(SPEC_SQUARE); saveCropSpec(SPEC_SQUARE); },
+          }, t("specSquare")),
+          createElement(Button, {
+            mini: true, primary: spec === SPEC_MAC, pressed: spec === SPEC_MAC,
+            onClick: () => { setSpec(SPEC_MAC); saveCropSpec(SPEC_MAC); },
+          }, t("specMac")),
+        ),
+        spec === SPEC_MAC ? createElement("p", { className: "dai-note" }, t("specMacNote")) : null,
         createElement("div", { className: "dai-crop-wrap" },
           createElement("canvas", {
             ref: canvasRef,
@@ -737,9 +817,9 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
         }).catch(() => {});
       };
 
-      const confirmCrop = ({ master, thumb }) => {
+      const confirmCrop = ({ master, thumb, spec }) => {
         setError(""); setNotice("");
-        const icon = { id: uid(), name: draft.name, master, thumb, createdAt: Date.now() };
+        const icon = { id: uid(), name: draft.name, master, thumb, spec: spec === SPEC_MAC ? SPEC_MAC : SPEC_SQUARE, createdAt: Date.now() };
         const res = actions.addIcon(icon);
         if (!res.ok) {
           setError(res.full ? format(t("errLibraryFull"), { n: MAX_LIBRARY }) : t("errQuota"));
@@ -768,7 +848,8 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
       const doDownloadPack = async (icon) => {
         const img = await loadImage(icon.master);
         const base = sanitizeName(icon.name);
-        for (const size of PACK_SIZES) {
+        const sizes = icon.spec === SPEC_MAC ? [MAC_SPEC.canvas, ...PACK_SIZES] : PACK_SIZES;
+        for (const size of sizes) {
           const out = document.createElement("canvas");
           out.width = size; out.height = size;
           const ctx = out.getContext("2d");
@@ -806,7 +887,10 @@ var __DAI_SQUIRCLE__=(()=>{var f=Object.defineProperty;var $=Object.getOwnProper
           : createElement("ul", { className: "dai-grid" },
               icons.icons.map((icon) => createElement("li", { key: icon.id, className: "dai-card" },
                 createElement("img", { src: icon.thumb, alt: "", className: "dai-card-img", draggable: false }),
-                assigns.defaultIconId === icon.id ? createElement("span", { className: "dai-badge" }, t("defaultBadge")) : null,
+                createElement("div", { className: "dai-row", style: { minHeight: 16, flexWrap: "nowrap", justifyContent: "center" } },
+                  assigns.defaultIconId === icon.id ? createElement("span", { className: "dai-badge" }, t("defaultBadge")) : null,
+                  icon.spec === SPEC_MAC ? createElement("span", { className: "dai-badge dai-badge-soft", title: t("specMac") }, t("badgeMac")) : null,
+                ),
                 createElement("span", { className: "dai-card-name", title: icon.name }, icon.name),
                 createElement("div", { className: "dai-card-actions" },
                   createElement(Button, { mini: true, onClick: () => actions.setDefault(icon.id) },
