@@ -8,7 +8,6 @@
     // ------------------------------------------------------------------
     const NS = "anyIcon";
     const LS_ICONS = "dsh-any-icon.icons.v1";
-    const LS_ASSIGN = "dsh-any-icon.assign.v1";
     const LS_CROP_SPEC = "dsh-any-icon.cropspec";
     const MASTER = 512;          // stored master edge, px
     const THUMB = 128;           // stored thumbnail edge, px
@@ -30,7 +29,7 @@
     const zh = {
       nav: "图标工坊",
       title: "图标工坊",
-      intro: "上传图片，裁成 1:1 图标，应用到会话列表。图标保存在本机浏览器中。",
+      intro: "上传图片，裁成 1:1 图标，可设为 dsh 桌面端的应用图标。图标保存在本机浏览器中。",
       specLabel: "输出规格",
       specSquare: "标准 1:1",
       specMac: "macOS Dock",
@@ -48,12 +47,8 @@
       back: "返回图库",
       library: "图标库",
       emptyLibrary: "还没有图标。点击「上传图片」创建第一个。",
-      defaultBadge: "默认",
-      setDefault: "设为默认",
-      unsetDefault: "取消默认",
-      defaultHint: "默认图标会显示在未单独设置图标的会话上。",
       delete: "删除",
-      confirmDelete: "删除图标「{name}」？正在使用它的会话将回到默认显示。",
+      confirmDelete: "删除图标「{name}」？",
       downloadPack: "下载 PNG 套装",
       exportAll: "导出备份",
       importAll: "导入备份",
@@ -65,13 +60,7 @@
       errLibraryFull: "图库已满（{n} 个），请先删除部分图标",
       errDecode: "图片解码失败，文件可能已损坏",
       count: "{n} 个图标",
-      assignTitle: "自定义会话图标",
-      assignPick: "点击图标应用到「{name}」",
-      assignClear: "清除（跟随默认）",
-      assignEmpty: "图库为空，请先在 设置 → 图标工坊 上传。",
-      rowMenu: "自定义图标…",
       saved: "已保存",
-      applyDefault: "设为此会话默认",
       appSection: "dsh 图标",
       appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。点「设为 dsh 图标」后立即生效：访达 / 应用程序 / Dock 一起更新，不重启 dsh、不打断正在运行的任务。原始图标已字节级备份，可一键还原；dsh 自动更新后会还原图标，重新应用即可。首次使用 macOS 可能要求「App 管理」权限。建议使用「macOS Dock」规格裁剪的图标。",
       appPick: "当前目标",
@@ -105,7 +94,7 @@
     const en = {
       nav: "Icon Studio",
       title: "Icon Studio",
-      intro: "Upload an image, crop it to a 1:1 icon and assign it to session rows. Icons are stored in this browser.",
+      intro: "Upload an image, crop it to a 1:1 icon and set it as the dsh desktop app's icon. Icons are stored in this browser.",
       specLabel: "Output spec",
       specSquare: "Standard 1:1",
       specMac: "macOS Dock",
@@ -123,12 +112,8 @@
       back: "Back to library",
       library: "Library",
       emptyLibrary: "No icons yet. Click “Upload image” to create the first one.",
-      defaultBadge: "Default",
-      setDefault: "Set as default",
-      unsetDefault: "Unset default",
-      defaultHint: "The default icon shows on sessions without their own assignment.",
       delete: "Delete",
-      confirmDelete: "Delete “{name}”? Sessions using it fall back to the default icon.",
+      confirmDelete: "Delete “{name}”?",
       downloadPack: "Download PNG pack",
       exportAll: "Export backup",
       importAll: "Import backup",
@@ -140,13 +125,7 @@
       errLibraryFull: "Library is full ({n}) — remove some icons first",
       errDecode: "Could not decode the image; the file may be corrupted",
       count: "{n} icons",
-      assignTitle: "Custom session icon",
-      assignPick: "Pick an icon for “{name}”",
-      assignClear: "Clear (follow default)",
-      assignEmpty: "Library is empty — upload one in Settings → Icon Studio first.",
-      rowMenu: "Custom icon…",
       saved: "Saved",
-      applyDefault: "Set as session default",
       appSection: "dsh icon",
       appIntro: "Set the cropped icon as the dsh desktop app's own icon. It takes effect the moment you apply it: Finder / the Apps view / the Dock all update together, without restarting dsh or interrupting running work. The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply. Icons cropped with the “macOS Dock” spec make the best app icons.",
       appPick: "Target",
@@ -210,7 +189,6 @@
     }
 
     const iconStore = createStore(loadJSON(LS_ICONS, { v: 1, icons: [] }));
-    const assignStore = createStore(loadJSON(LS_ASSIGN, { v: 1, bySession: {}, defaultIconId: undefined }));
 
     const actions = {
       addIcon(icon) {
@@ -226,65 +204,20 @@
         const next = { v: 1, icons: data.icons.filter((i) => i.id !== id) };
         if (!saveJSON(LS_ICONS, next).ok) return { ok: false };
         iconStore.set(next);
-        const a = assignStore.get();
-        if (a.defaultIconId === id || Object.values(a.bySession).includes(id)) {
-          const bySession = {};
-          for (const [sid, iid] of Object.entries(a.bySession)) if (iid !== id) bySession[sid] = iid;
-          const nextAssign = { v: 1, bySession, defaultIconId: a.defaultIconId === id ? undefined : a.defaultIconId };
-          if (saveJSON(LS_ASSIGN, nextAssign).ok) assignStore.set(nextAssign);
-        }
         return { ok: true };
-      },
-      setDefault(id) {
-        const a = assignStore.get();
-        const next = { v: 1, bySession: a.bySession, defaultIconId: a.defaultIconId === id ? undefined : id };
-        const res = saveJSON(LS_ASSIGN, next);
-        if (res.ok) assignStore.set(next);
-        return res;
-      },
-      assignSession(sessionId, iconId) {
-        const a = assignStore.get();
-        const bySession = { ...a.bySession };
-        if (iconId) bySession[sessionId] = iconId; else delete bySession[sessionId];
-        const next = { v: 1, bySession, defaultIconId: a.defaultIconId };
-        const res = saveJSON(LS_ASSIGN, next);
-        if (res.ok) assignStore.set(next);
-        return res;
       },
       importAll(payload) {
         if (!payload || payload.v !== 1 || !Array.isArray(payload.icons)) return { ok: false, invalid: true };
         const icons = payload.icons
           .filter((i) => i && typeof i.id === "string" && typeof i.master === "string" && typeof i.thumb === "string")
           .map((i) => ({ ...i, spec: i.spec === SPEC_MAC ? SPEC_MAC : SPEC_SQUARE }));
-        const bySession = {};
-        const a = payload.assignments && typeof payload.assignments === "object" ? payload.assignments : {};
-        if (a.bySession && typeof a.bySession === "object") {
-          for (const [sid, iid] of Object.entries(a.bySession)) {
-            if (typeof sid === "string" && typeof iid === "string" && icons.some((i) => i.id === iid)) bySession[sid] = iid;
-          }
-        }
-        const defaultIconId = typeof a.defaultIconId === "string" && icons.some((i) => i.id === a.defaultIconId) ? a.defaultIconId : undefined;
         const nextIcons = { v: 1, icons };
-        const nextAssign = { v: 1, bySession, defaultIconId };
-        const r1 = saveJSON(LS_ICONS, nextIcons);
-        if (!r1.ok) return r1;
-        const r2 = saveJSON(LS_ASSIGN, nextAssign);
-        if (!r2.ok) return r2;
+        const res = saveJSON(LS_ICONS, nextIcons);
+        if (!res.ok) return res;
         iconStore.set(nextIcons);
-        assignStore.set(nextAssign);
         return { ok: true, count: icons.length };
       },
     };
-
-    function iconById(id) {
-      if (!id) return undefined;
-      return iconStore.get().icons.find((i) => i.id === id);
-    }
-
-    function iconForSession(sessionId) {
-      const a = assignStore.get();
-      return iconById((sessionId && a.bySession[sessionId]) || a.defaultIconId);
-    }
 
     // ------------------------------------------------------------------
     // Image helpers
@@ -424,27 +357,15 @@
       ".dai-canvas:active{cursor:grabbing}",
       ".dai-canvas:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4c7dff);outline-offset:2px}",
       ".dai-zoom{width:min(320px,100%);accent-color:var(--dsw-alias-state-business-primary,#4c7dff)}",
-      ".dai-dialog-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:10000}",
-      ".dai-dialog{width:min(420px,calc(100vw - 48px));max-height:min(70vh,560px);overflow:auto;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.25));border-radius:var(--dsw-radius-xl,14px);background:var(--dsw-alias-bg-layer-3,#fff);box-shadow:0 18px 50px rgba(0,0,0,.28);padding:18px;display:flex;flex-direction:column;gap:12px}",
-      ".dai-dialog-title{margin:0;font-size:15px;font-weight:600}",
-      ".dai-dialog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}",
-      ".dai-pick{border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.3));border-radius:12px;background:none;padding:6px;cursor:pointer;display:flex;justify-content:center}",
-      ".dai-pick:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.12))}",
-      ".dai-pick:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4c7dff);outline-offset:1px}",
-      ".dai-pick-img{width:44px;height:44px;border-radius:10px;object-fit:cover;display:block}",
-      ".dai-row-icon{width:16px;height:16px;border-radius:4px;object-fit:cover;display:block}",
       ".dai-input{appearance:none;font:inherit;border-radius:var(--dsw-radius-sm,6px);border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.35));background:var(--dsw-alias-bg-layer-2,transparent);color:var(--dsw-alias-label-primary);padding:5px 10px;font-size:13px}",
       ".dai-input:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4c7dff);outline-offset:1px}",
-      ".dai-select{width:100%;height:132px;overflow:auto;appearance:none;font:inherit;border-radius:var(--dsw-radius-sm,6px);border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.35));background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-primary);padding:4px;font-size:13px}",
-      ".dai-select:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4c7dff);outline-offset:1px}",
-      ".dai-select option{padding:3px 8px}",
       ".dai-iconstrip{display:flex;flex-wrap:wrap;gap:8px}",
       ".dai-iconopt{border:2px solid transparent;border-radius:12px;padding:3px;background:none;cursor:pointer;display:flex}",
       ".dai-iconopt:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.12))}",
       ".dai-iconopt-on{border-color:var(--dsw-alias-state-business-primary,#4c7dff)}",
       ".dai-iconopt:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4c7dff);outline-offset:1px}",
       ".dai-iconopt-img{width:40px;height:40px;border-radius:9px;object-fit:cover;display:block}",
-      "@media (prefers-reduced-motion:reduce){.dai-dialog,.dai-btn{transition:none}}",
+      "@media (prefers-reduced-motion:reduce){.dai-btn{transition:none}}",
     ].join("\n");
 
     // ------------------------------------------------------------------
@@ -717,7 +638,6 @@
     // ------------------------------------------------------------------
     function Workshop({ t }) {
       const icons = useStore(iconStore);
-      const assigns = useStore(assignStore);
       const [draft, setDraft] = React.useState(null); // { img, name }
       const [error, setError] = React.useState("");
       const [notice, setNotice] = React.useState("");
@@ -759,7 +679,7 @@
       };
 
       const doExport = () => {
-        const payload = { app: "dsh-any-icon", version: 1, icons: icons.icons, assignments: assigns };
+        const payload = { app: "dsh-any-icon", version: 1, icons: icons.icons };
         downloadDataURL("dsh-any-icon-backup.json", "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload)));
       };
 
@@ -816,14 +736,9 @@
           : createElement("ul", { className: "dai-grid" },
               icons.icons.map((icon) => createElement("li", { key: icon.id, className: "dai-card" },
                 createElement("img", { src: icon.thumb, alt: "", className: "dai-card-img", draggable: false }),
-                createElement("div", { className: "dai-row", style: { minHeight: 16, flexWrap: "nowrap", justifyContent: "center" } },
-                  assigns.defaultIconId === icon.id ? createElement("span", { className: "dai-badge" }, t("defaultBadge")) : null,
-                  icon.spec === SPEC_MAC ? createElement("span", { className: "dai-badge dai-badge-soft", title: t("specMac") }, t("badgeMac")) : null,
-                ),
+                icon.spec === SPEC_MAC ? createElement("span", { className: "dai-badge dai-badge-soft", title: t("specMac") }, t("badgeMac")) : null,
                 createElement("span", { className: "dai-card-name", title: icon.name }, icon.name),
                 createElement("div", { className: "dai-card-actions" },
-                  createElement(Button, { mini: true, onClick: () => actions.setDefault(icon.id) },
-                    assigns.defaultIconId === icon.id ? t("unsetDefault") : t("setDefault")),
                   createElement(Button, { mini: true, onClick: () => void doDownloadPack(icon) }, t("downloadPack")),
                   createElement(Button, {
                     mini: true, danger: true,
@@ -832,7 +747,6 @@
                 ),
               )),
             ),
-        assigns.defaultIconId ? createElement("p", { className: "dai-note" }, t("defaultHint")) : null,
         createElement(DshIconSection, { t }),
         createElement("input", {
           ref: fileRef, type: "file", accept: "image/png,image/jpeg,image/webp", style: { display: "none" },
@@ -842,85 +756,6 @@
           ref: importRef, type: "file", accept: "application/json,.json", style: { display: "none" },
           onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; void doImport(f); },
         }),
-      );
-    }
-
-    // ------------------------------------------------------------------
-    // Sidebar: row icon + menu entry + assignment dialog
-    // ------------------------------------------------------------------
-    const modalStore = createStore({ open: false, sessionId: undefined, displayTitle: "" });
-
-    function RowIcon({ sessionId }) {
-      const icons = useStore(iconStore);
-      const assigns = useStore(assignStore);
-      const iconId = (sessionId && assigns.bySession[sessionId]) || assigns.defaultIconId;
-      const icon = iconId ? icons.icons.find((i) => i.id === iconId) : undefined;
-      if (!icon) return null;
-      return createElement("img", {
-        src: icon.thumb, alt: "", draggable: false,
-        className: "dai-row-icon", title: icon.name,
-      });
-    }
-
-    function SessionIconMenuItem({ sessionId, displayTitle, useMenuOpenState }) {
-      const t = makeT();
-      const closeMenu = () => {
-        try { if (useMenuOpenState) { const [, setOpen] = useMenuOpenState(); setOpen(false); } } catch { /* menu closes on its own */ }
-      };
-      return createElement("button", {
-        type: "button", role: "menuitem",
-        onClick: () => {
-          closeMenu();
-          modalStore.set({ open: true, sessionId, displayTitle: displayTitle || "" });
-        },
-      }, t("rowMenu"));
-    }
-
-    function AssignDialogHost() {
-      const t = makeT();
-      const modal = useStore(modalStore);
-      const icons = useStore(iconStore);
-      const assigns = useStore(assignStore);
-      const dialogRef = React.useRef(null);
-
-      React.useEffect(() => {
-        if (!modal.open) return;
-        const onKey = (e) => { if (e.key === "Escape") modalStore.set({ open: false, sessionId: undefined, displayTitle: "" }); };
-        window.addEventListener("keydown", onKey);
-        if (dialogRef.current) dialogRef.current.focus();
-        return () => window.removeEventListener("keydown", onKey);
-      }, [modal.open]);
-
-      if (!modal.open) return null;
-
-      const close = () => modalStore.set({ open: false, sessionId: undefined, displayTitle: "" });
-
-      return ReactDOM.createPortal(
-        createElement("div", {
-          className: "dai-dialog-backdrop",
-          onClick: (e) => { if (e.target === e.currentTarget) close(); },
-        },
-          createElement("div", {
-            className: "dai-dialog", role: "dialog", "aria-modal": true, "aria-label": t("assignTitle"),
-            tabIndex: -1, ref: dialogRef, style: { outline: "none" },
-          },
-            createElement("h4", { className: "dai-dialog-title" }, t("assignTitle")),
-            createElement("p", { className: "dai-note" }, format(t("assignPick"), { name: modal.displayTitle })),
-            icons.icons.length === 0
-              ? createElement("p", { className: "dai-note" }, t("assignEmpty"))
-              : createElement("div", { className: "dai-dialog-grid" },
-                  icons.icons.map((icon) => createElement("button", {
-                    key: icon.id, type: "button", className: "dai-pick", title: icon.name,
-                    onClick: () => { actions.assignSession(modal.sessionId, icon.id); close(); },
-                  }, createElement("img", { src: icon.thumb, alt: icon.name, className: "dai-pick-img", draggable: false }))),
-                ),
-            createElement("div", { className: "dai-row" },
-              modal.sessionId && createElement(Button, { onClick: () => { actions.assignSession(modal.sessionId, undefined); close(); } }, t("assignClear")),
-              createElement(Button, { onClick: close }, t("cancel")),
-            ),
-          ),
-        ),
-        document.body,
       );
     }
 
@@ -1085,27 +920,6 @@
         locale: NS,
         inject: () => ({}),
       }, (ownerProps) => createElement(Workshop, { t: makeT() })));
-
-      // Session row leading icon (16px cell before the title).
-      ctx.slots.inject("sidebar.session.row.leading", () => ctx.slots.register({
-        name: "sidebar.session.row.leading",
-        id: "any-icon",
-        order: 10,
-      }, (ownerProps) => createElement(RowIcon, ownerProps)));
-
-      // Per-session "..." menu entry that opens the assignment dialog.
-      ctx.slots.inject("sidebar.workspaces.session.menu.item", () => ctx.slots.register({
-        name: "sidebar.workspaces.session.menu.item",
-        id: "any-icon",
-        order: 450,
-      }, (ownerProps) => createElement(SessionIconMenuItem, ownerProps)));
-
-      // Global overlay hosting the assignment dialog.
-      ctx.slots.inject("shell.overlay", () => ctx.slots.register({
-        name: "shell.overlay",
-        id: "any-icon-assign",
-        label: () => "any-icon",
-      }, () => createElement(AssignDialogHost)));
 
       // Dev self-test hook: set localStorage["dsh-any-icon.selftest"]="1" and
       // reload; the bridge round-trip result lands in
