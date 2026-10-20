@@ -62,7 +62,7 @@
       count: "{n} 个图标",
       saved: "已保存",
       appSection: "dsh 图标",
-      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。点「设为 dsh 图标」后立即生效：访达 / 应用程序 / Dock 一起更新，不重启 dsh、不打断正在运行的任务。原始图标已字节级备份，可一键还原；dsh 自动更新后会还原图标，重新应用即可。首次使用 macOS 可能要求「App 管理」权限。建议使用「macOS Dock」规格裁剪的图标。",
+      appIntro: "把裁剪好的图标设为 dsh 桌面端的应用图标。应用前自动生成带透明圆角和边距的 macOS Dock 图标，旧图库图标也无需重新导入。点「设为 dsh 图标」后立即生效：访达 / 应用程序 / Dock 一起更新，不重启 dsh、不打断正在运行的任务。原始图标已字节级备份，可一键还原；dsh 自动更新后会还原图标，重新应用即可。首次使用 macOS 可能要求「App 管理」权限。",
       appPick: "当前目标",
       appLoading: "正在检测 dsh 桌面端…",
       appNotFound: "未找到 dsh 桌面端（需要 macOS 版并安装在 /Applications 或「应用程序」文件夹）",
@@ -127,7 +127,7 @@
       count: "{n} icons",
       saved: "Saved",
       appSection: "dsh icon",
-      appIntro: "Set the cropped icon as the dsh desktop app's own icon. It takes effect the moment you apply it: Finder / the Apps view / the Dock all update together, without restarting dsh or interrupting running work. The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply. Icons cropped with the “macOS Dock” spec make the best app icons.",
+      appIntro: "Set the cropped icon as the dsh desktop app's own icon. Before applying, every icon is converted to the macOS Dock format with transparent corners and margins, including icons already in your library. Finder / the Apps view / the Dock update together, without restarting dsh or interrupting running work. The original icon is backed up byte-for-byte and can be restored anytime; a dsh auto-update reverts the icon — just re-apply.",
       appPick: "Target",
       appLoading: "Detecting the dsh desktop app…",
       appNotFound: "dsh desktop app not found (macOS build expected under /Applications or your Applications folder)",
@@ -303,8 +303,8 @@
 
     // Crop-spec preference survives across crops and sessions.
     function loadCropSpec() {
-      try { return localStorage.getItem(LS_CROP_SPEC) === SPEC_MAC ? SPEC_MAC : SPEC_SQUARE; }
-      catch { return SPEC_SQUARE; }
+      try { return localStorage.getItem(LS_CROP_SPEC) === SPEC_SQUARE ? SPEC_SQUARE : SPEC_MAC; }
+      catch { return SPEC_MAC; }
     }
 
     function saveCropSpec(spec) {
@@ -327,6 +327,20 @@
       return doc;
     }
 
+    // The Dock displays the actual image alpha; CSS thumbnail rounding and
+    // Finder's presentation do not change the pixels sent to the Host. Always
+    // prepare one transparent PNG for both the native icns and live icon.
+    async function prepareDshIcon(icon) {
+      const img = await loadImage(icon.master);
+      const edge = Math.min(img.naturalWidth, img.naturalHeight);
+      // A mac-dock master already contains the document margins. Take its
+      // inner graphic so applying it again cannot add a second set of margins.
+      const inset = icon.spec === SPEC_MAC ? edge * MAC_SPEC.margin / MAC_SPEC.canvas : 0;
+      const sx = (img.naturalWidth - edge) / 2 + inset;
+      const sy = (img.naturalHeight - edge) / 2 + inset;
+      return renderMacDockDoc(img, sx, sy, edge - 2 * inset).toDataURL("image/png");
+    }
+
     // ------------------------------------------------------------------
     // Styles (single injected sheet, removed with the plugin)
     // ------------------------------------------------------------------
@@ -346,7 +360,7 @@
       ".dai-ok{margin:0;font-size:12px;line-height:1.5;color:var(--dsw-alias-state-success-primary,#2f9e63)}",
       ".dai-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;padding:0;margin:0;list-style:none}",
       ".dai-card{border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.3));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-settings-card-fill,transparent);padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center}",
-      ".dai-card-img{width:64px;height:64px;border-radius:14px;object-fit:cover;display:block;background:var(--dsw-alias-bg-layer-2,rgba(127,127,127,.1))}",
+      ".dai-card-img{width:64px;height:64px;object-fit:contain;display:block}",
       ".dai-card-name{font-size:12px;line-height:1.4;color:var(--dsw-alias-label-secondary);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
       ".dai-badge{font-size:10px;line-height:16px;padding:0 7px;border-radius:999px;background:var(--dsw-alias-state-business-primary,#4c7dff);color:var(--dsw-alias-bg-layer-3,#fff);align-self:center}",
       ".dai-badge-soft{background:var(--dsw-alias-label-tertiary,rgba(127,127,127,.55))}",
@@ -364,7 +378,7 @@
       ".dai-iconopt:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.12))}",
       ".dai-iconopt-on{border-color:var(--dsw-alias-state-business-primary,#4c7dff)}",
       ".dai-iconopt:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4c7dff);outline-offset:1px}",
-      ".dai-iconopt-img{width:40px;height:40px;border-radius:9px;object-fit:cover;display:block}",
+      ".dai-iconopt-img{width:40px;height:40px;object-fit:contain;display:block}",
       "@media (prefers-reduced-motion:reduce){.dai-btn{transition:none}}",
     ].join("\n");
 
@@ -798,7 +812,8 @@
         if (!window.confirm(t("confirmApply"))) return;
         setBusy(true);
         try {
-          const result = await callAnyIcon(boundCtx, (svc) => svc.applyDshIcon(icon.master));
+          const pngDataUrl = await prepareDshIcon(icon);
+          const result = await callAnyIcon(boundCtx, (svc) => svc.applyDshIcon(pngDataUrl));
           if (result && result.native === "failed") {
             setWarning(format(t("appApplyPartial"), { msg: result.nativeError || "" }));
           } else {

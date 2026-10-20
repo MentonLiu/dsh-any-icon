@@ -1,0 +1,142 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Dock icon output regression checks</title>
+<style>
+  body { font: 15px system-ui; margin: 32px; background: #20242b; color: #eee; }
+  li { margin: 12px 0; }
+  img { width: 96px; vertical-align: middle; margin-right: 16px; }
+</style>
+<h1>Dock icon output regression checks</h1>
+<p>Serve the repository over localhost and open /tools/verify-icon-output.html.
+  Runs the built client's actual apply action against a recording service, using real browser canvas pixels.</p>
+<ul id="results"></ul>
+<p id="status">Running…</p>
+<script>
+  // Capture the shipped module without loading dsh or touching its profiles.
+  let definition;
+  window.__ModuleLoader__ = { load(value) { definition = value; } };
+</script>
+<script src="../client/client.js"></script>
+<script>
+  const assert = (condition, message) => { if (!condition) throw new Error(message); };
+  const imageFrom = (src) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+  const nodes = (node) => !node || typeof node !== 'object' ? [] : [node, ...node.children.flatMap(nodes)];
+  function fixture(type = 'image/png', mac = false) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = mac ? 1024 : 512;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#2864dc';
+    const margin = mac ? 100 : 0;
+    context.fillRect(margin, margin, canvas.width - 2 * margin, canvas.height - 2 * margin);
+    return canvas.toDataURL(type);
+  }
+
+  async function applyIcon(master, spec) {
+    const icon = { id: 'test-icon', name: 'fixture', master, thumb: master, spec };
+    localStorage.setItem('dsh-any-icon.icons.v1', JSON.stringify({ v: 1, icons: [icon] }));
+    let component = '', hook = 0, renderSection, receive;
+    const disposers = [];
+    const received = new Promise((resolve) => { receive = resolve; });
+    const React = {
+      createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity) }),
+      useSyncExternalStore: (_subscribe, get) => get(),
+      useState: (initial) => [component === 'section' && hook++ === 1 ? icon.id : initial, () => {}],
+      useRef: (current) => ({ current }),
+      useCallback: (callback) => callback,
+      useEffect() {},
+    };
+    const service = {
+      async applyDshIcon(data) { receive(data); return { ok: true, native: 'done' }; },
+      async getDshIconState() { return { ok: true, found: true }; },
+    };
+    const context = {
+      locale: { register: () => () => {} },
+      effect(callback) { const dispose = callback(); if (dispose) disposers.push(dispose); },
+      slots: {
+        inject(_name, callback) { callback(); },
+        register(_descriptor, render) { renderSection = render; },
+      },
+      remote: { $mount: async () => {} },
+      inject(_dependencies, callback) { callback({ remote: { anyIcon: service } }); },
+    };
+    const plugin = definition.factory((name) => {
+      if (name === 'react') return React;
+      if (name === 'react-dom') return {};
+      throw new Error(`Unexpected dependency: ${name}`);
+    });
+    plugin.apply(context);
+    const workshop = renderSection({});
+    component = 'workshop';
+    const workshopTree = workshop.type(workshop.props);
+    const section = nodes(workshopTree).find((node) => node.type?.name === 'DshIconSection');
+    assert(section, 'App icon section is registered');
+    component = 'section'; hook = 0;
+    const sectionTree = section.type(section.props);
+    const button = nodes(sectionTree).find((node) => node.children.includes('设为 dsh 图标'));
+    assert(button, 'Apply action exists');
+    const originalConfirm = window.confirm;
+    window.confirm = () => true;
+    let timeout;
+    try {
+      button.props.onClick();
+      return await Promise.race([
+        received,
+        new Promise((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('Apply did not reach the service')), 3000); }),
+      ]);
+    } finally {
+      clearTimeout(timeout);
+      window.confirm = originalConfirm;
+      disposers.forEach((dispose) => dispose());
+    }
+  }
+
+  async function checkPixels(data) {
+    assert(data.startsWith('data:image/png;base64,'), 'Host receives lossless PNG');
+    const image = await imageFrom(data);
+    assert(image.naturalWidth === 1024 && image.naturalHeight === 1024, '1024 × 1024 output');
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1024;
+    const context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, 1024, 1024).data;
+    const alpha = (x, y) => pixels[(y * 1024 + x) * 4 + 3];
+    for (const [x, y] of [[0, 0], [1023, 1023], [100, 100], [923, 100], [100, 923], [923, 923], [512, 99], [99, 512]]) {
+      assert(alpha(x, y) === 0, `Transparent margin/corner at ${x}, ${y}`);
+    }
+    for (const [x, y] of [[512, 100], [512, 923], [100, 512], [923, 512], [512, 512]]) {
+      assert(alpha(x, y) === 255, `Graphic keeps full 824px extent at ${x}, ${y}`);
+    }
+    const center = (512 * 1024 + 512) * 4;
+    assert(Math.abs(pixels[center] - 40) <= 3 && Math.abs(pixels[center + 2] - 220) <= 3, 'Image colors are retained');
+  }
+
+  (async () => {
+    let last;
+    const cases = [
+      ['Legacy PNG without spec', fixture(), undefined],
+      ['Standard square WebP', fixture('image/webp'), 'square'],
+      ['Imported JPEG', fixture('image/jpeg'), 'square'],
+      ['Existing macOS Dock document', fixture('image/png', true), 'mac-dock'],
+    ];
+    for (const [label, master, spec] of cases) {
+      last = await applyIcon(master, spec);
+      await checkPixels(last);
+      const row = document.createElement('li');
+      const preview = new Image(); preview.src = last;
+      row.append(preview, `PASS — ${label}: transparent corners, 100px margins, PNG sent to Host`);
+      document.querySelector('#results').append(row);
+    }
+    await checkPixels(await applyIcon(last, 'mac-dock'));
+    const row = document.createElement('li');
+    row.textContent = 'PASS — Reapplying a prepared icon does not add margins or shrink the graphic';
+    document.querySelector('#results').append(row);
+    document.querySelector('#status').textContent = 'All 5 checks passed';
+  })().catch((error) => {
+    document.querySelector('#status').textContent = `FAIL — ${error.stack || error}`;
+  });
+</script>
