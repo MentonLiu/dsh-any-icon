@@ -81,15 +81,13 @@ tools/build-client.mjs     构建脚本
 tools/verify-squircle.mjs  遮罩几何断言 + 预览渲染
 ```
 
-机制细节、实测数据与踩坑记录（缓存层级、签名顺序约束、遮罩校准）见 [docs/spike-notes.md](docs/spike-notes.md)。
-
 ## 变更记录
 
 > 历史分支与早期文档中的 v2.0 / v2.1 / v2.2 为内部叫法；自 v0.3.0 起使用语义化版本。
 
 - **未发布（dev 分支）**：新增「macOS Dock」裁剪输出规格（1024 文档 + squircle 遮罩）；iconset 补齐 1024px 档；**移除会话图标功能**（侧栏行图标 / 会话菜单分配 / 默认图标），插件聚焦 App 图标。版本号未变
 - **v0.3.0**：App 图标改为「立即生效」——双层图标 + 图标缓存刷新，不再重启 dsh / Dock / Finder；字节级备份 + 一键还原
-- 更早（会话图标 v1 等）：见 git 历史与 [docs/spike-notes.md](docs/spike-notes.md)
+- 更早（会话图标 v1 等）的变更：见 Git 历史
 
 ## 路线图
 

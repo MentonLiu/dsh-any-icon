@@ -31,7 +31,7 @@
 //   · the true Tahoe mask deviates from ANY simple two-parameter family (this
 //     one, superellipse fits) by ≲ 2.5% of the graphic — sub-3px at the Dock's
 //     128px tile, i.e. invisible. Every constant below comes straight from the
-//     documented spec. Calibration notes: docs/spike-notes.md.
+//     documented macOS Dock output spec.
 //
 // Pure geometry — no DOM dependencies. squirclePathData() output feeds both
 // `new Path2D(d)` (browser canvas clip) and SVG (tooling/verification).

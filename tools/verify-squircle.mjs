@@ -79,7 +79,7 @@ check('G1 continuity at ramp/arc junctions (<0.5°)', jump < 0.5 * Math.PI / 180
 check('path data starts/ends coherently', squirclePathData(S).startsWith('M ') && squirclePathData(S).endsWith(' Z'))
 
 // ---- comparison against the measured macOS 26 mask (informational) --------
-// Measured from NSWorkspace-rendered Calculator.app icon (see spike-notes);
+// Measured from an NSWorkspace-rendered Calculator.app icon;
 // both columns are "boundary distance from the box edge at depth dy".
 const measured = { 5: 186, 10: 158, 20: 127, 40: 89, 60: 66, 100: 33, 140: 14, 200: 3 }
 const cornerYs = corner.map((p) => p[1])
@@ -94,7 +94,7 @@ const ourAt = (dy) => {
 let line = '  boundary distance at depth dy (ours vs measured):'
 for (const [dy, m] of Object.entries(measured)) line += `  dy${dy}:${ourAt(Number(dy)).toFixed(0)}/${m}`
 console.log(line)
-console.log('  (≤ ~20px @1024 systematic deviation to the true mask; sub-3px at Dock 128px — see spike-notes)')
+console.log('  (≤ ~20px @1024 systematic deviation to the true mask; sub-3px at Dock 128px)')
 
 // ---- optional visual render ------------------------------------------------
 if (process.argv.includes('--render')) {
