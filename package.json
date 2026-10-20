@@ -1,7 +1,7 @@
 {
   "name": "dsh-any-icon",
-  "description": "Upload an image, crop it to a 1:1 icon, use it as the dsh desktop app icon (instant update across Finder / Apps / Dock, no restart) or assign it to dsh session rows.",
-  "version": "0.3.0",
+  "description": "Upload an image, crop it to a 1:1 icon and set it as the dsh desktop app's own icon — instant update across Finder / Apps / Dock, no restart, one-click restore.",
+  "version": "0.3.1",
   "publishConfig": {
     "access": "public"
   },
@@ -32,10 +32,7 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-ui-workspace",
-        "@deepseek-ai/dsh-client-ui-sidebar",
-        "@deepseek-ai/dsh-client-ui-primitives"
+        "@deepseek-ai/dsh-client-ui-settings"
       ]
     }
   },
