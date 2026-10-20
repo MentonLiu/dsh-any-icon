@@ -1,7 +1,7 @@
 {
   "name": "dsh-any-icon",
   "description": "Upload an image, crop it to a 1:1 icon and set it as the dsh desktop app's own icon — instant update across Finder / Apps / Dock, no restart, one-click restore.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "engines": {
     "dsh": ">=0.2.1-rc.2 <0.3.0-0"
   },
